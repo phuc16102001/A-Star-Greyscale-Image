@@ -1,70 +1,21 @@
+######################################
+#                                    #
+# Project name: A* for greyscale img #
+# Author: Do Vuong Phuc              #
+# Author: Hoang Nhu Thanh            #
+# Date: 07/12/2021                   #
+# Contact: phuc16102001@gmail.com    #
+# * Please do not copy the source *  #
+#                                    #
+######################################
+
+#=============================Library=============================
 from MyImg import *
 from constant import *
-import math  #sqrt, fabs, abs
-from time import * #sleep
+from MyMath import *
+from MyNode import *
 
-def abs(x):
-    if (x<0):
-        return -x
-    return x
-
-def sign(x):
-    if (x<0):
-        return -1
-    elif (x>0):
-        return 1
-    return 0
-
-class Node:
-    x = None
-    y = None
-    g = 0
-    h = 0
-    f = 0
-    a = None
-    parent = None
-
-    def __init__(self,pos,a):
-        self.x=pos[0]
-        self.y=pos[1]
-        self.a=a
-
-    def print(self):
-        print(self.x,self.y,self.a,self.g,self.h,self.f)
-
-    def toStr(self):
-        return ("%f %f %f %f %f %f\n"%(self.x,self.y,self.a,self.g,self.h,self.f))
-
-    def euclidDistance(self,node):
-        dx = self.x-node.x
-        dy = self.y-node.y
-        d = math.sqrt(dx**2+dy**2)
-        return d
-
-    def deltaA(self,node):
-        return self.a-node.a
-    
-    def distanceTo(self,node):
-        da = self.deltaA(node)
-        d = self.euclidDistance(node)
-        return d+(0.5*sign(da)+1)*abs(da)
-
-    def calculateF(self):
-        self.f = self.g+self.h
-
-    def setParent(self,node):
-        self.parent = node
-        self.g = self.parent.g + self.parent.distanceTo(self)
-        self.calculateF()
-
-    def setH(self,h):
-        self.h=h
-        self.calculateF()
-
-    def pos(self):
-        return (self.x,self.y)
-
-
+#=============================Utils function=============================
 def convertPoint(raw):
     raw = raw[1:len(raw)-1]
     raw = raw.split(';')
@@ -77,9 +28,9 @@ def readInput(path):
     data = fin.readlines()
     for i in range(len(data)):
         data[i] = data[i].replace('\n','')
-    data[0]=convertPoint(data[0])
-    data[1]=convertPoint(data[1])
-    data[2]=int(data[2])
+    data[0]=convertPoint(data[0])   #Start point
+    data[1]=convertPoint(data[1])   #End point
+    data[2]=int(data[2])            #Value m
     fin.close()
     return (data[0],data[1],data[2])
 
@@ -134,11 +85,7 @@ def addQueue(parent,node,goal,hFunction):
         oldG = node.g
         newG = parent.g+parent.distanceTo(node)
         if (newG<oldG):
-            #node.print()
             node.setParent(parent)
-            #node.print()
-            #print("----")
-        
     elif (not(node in explored)):
         node.setParent(parent)
         node.setH(hFunction(node,goal))
@@ -147,7 +94,7 @@ def addQueue(parent,node,goal,hFunction):
 def queuePrint():
     global queue
     for node in queue:
-        node.print()
+        node.printInfo()
 
 def findMin(queue,priority):
     v = None
@@ -166,7 +113,6 @@ def findMin(queue,priority):
 def run(hFunc,number):
     global img, start, end, m, explored, queue, nodeMat
     count = 0
-    #newImg = img.copy("test%d.bmp"%(count))
     imgOut = img.copy("output%d.bmp"%(number))
     startNode = nodeMat[start[1]][start[0]]
     goalNode = nodeMat[end[1]][end[0]]
@@ -174,25 +120,16 @@ def run(hFunc,number):
     result = []
     while (len(queue)>0):
         node = findMin(queue,priority)
-        #newImg.write(node.pos(),colorBlue)
-        #newImg.save()
-        #print("===========")
-        #sleep(3)
         if (node==goalNode):
             #Traceback
-            #pointOutput = open("point.txt",'w')
-            #pointOutput.write("x y a g h f\n")
             while (node!=startNode):
                 result.append(node)
                 pos = node.pos()
-                node.print()
+                node.printInfo()
                 imgOut.write(pos,colorRed)
                 node=node.parent
             result.append(startNode)
             result = result[::-1]
-            #for node in result:
-                #pointOutput.write(node.toStr())
-            #pointOutput.close()
             break
         
         #Not goal
@@ -202,25 +139,21 @@ def run(hFunc,number):
         for i in range(len(neighboor)):
             addQueue(node,neighboor[i],goalNode,hFunc)
             pos = neighboor[i].pos()
-            #newImg.write(pos,colorGreen)
-            #newImg.save()
-            #neighboor[i].print()
-            
-        #node.print()
-        #queuePrint()
-        #count+=1
-        #newImg = newImg.copy("test%d.bmp"%(count))
-        #print("=========")
     imgOut.save()
     imgOut.show()
     return (startNode,goalNode)
     
-img = MyImg(defaultPath)
-img.print()
-start,end,m = readInput("input.txt")
-nodeMat = createNode(img)
-explored = set()
-queue = set()
-startNode, goalNode = run(heuristic2,1)
-startNode.print()
-goalNode.print()
+#=============================Main driven=============================
+def main():
+    img = MyImg(defaultPath)
+    img.printInfo()
+    start,end,m = readInput("input.txt")
+    nodeMat = createNode(img)
+    explored = set()
+    queue = set()
+    startNode, goalNode = run(heuristic2,1)
+    startNode.printInfo()
+    goalNode.printInfo()
+
+if __name__=="__main__":
+    main()
