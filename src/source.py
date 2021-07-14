@@ -66,8 +66,8 @@ def priority(node):
 #Get all the neighboor node (adjacent, |deltA|<=m)
 #Input: node = Node
 #Output: list of Node 
-def getNeighboor(node):
-    global img, m, nodeMat
+def getNeighboor(img, node):
+    global m, nodeMat
 
     dx = [-1,-1,-1,0,0,1,1,1]
     dy = [-1,0,1,-1,1,-1,0,1]
@@ -100,7 +100,9 @@ def createNode(img):
 #Add a node to the queue
 #Input: parent, node, goal, hFunction = Node, Node, Node, Pointer to a float-return function
 #Description: Add [node] to queue whose [parent] and [goal] with the heuristic function [hFunction]
-def addQueue(queue,explored,parent,node,goal,hFunction):
+def addQueue(parent,node,goal,hFunction):
+    global queue,explored
+
     if (node in queue):
         oldG = node.g
         newG = parent.g+parent.distanceTo(node)
@@ -168,25 +170,30 @@ def run(img, hFunc,number):
         #Not goal
         queue.remove(node)
         explored.add(node)
-        neighboor = getNeighboor(node)
+        neighboor = getNeighboor(img,node)
         for i in range(len(neighboor)):
-            addQueue(queue,explored,node,neighboor[i],goalNode,hFunc)
+            addQueue(node,neighboor[i],goalNode,hFunc)
             pos = neighboor[i].pos()
     imgOut.save()
     imgOut.show()
     return (startNode,goalNode)
     
 #=============================Main driven=============================
+nodeMat = None
+explored = set()
+queue = set()
+start = None
+end = None
+m = None
+
 def main():
+    global nodeMat, explored,queue,start,end,m
+
     img = MyImg(defaultPath)
     img.printInfo()
     start,end,m = readInput(inputPath)
     nodeMat = createNode(img)
-
-    explored = set()
-    queue = set()
     startNode, goalNode = run(img, heuristic2,1)
-
     startNode.printInfo()
     goalNode.printInfo()
 
