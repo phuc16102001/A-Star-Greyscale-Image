@@ -15,25 +15,7 @@ from constant import *
 from MyMath import *
 from MyNode import *
 
-#=============================Utils function=============================
-def convertPoint(raw):
-    raw = raw[1:len(raw)-1]
-    raw = raw.split(';')
-    for i in range(len(raw)):
-        raw[i] = int(raw[i])
-    return tuple(raw)
-
-def readInput(path):
-    fin = open(path)
-    data = fin.readlines()
-    for i in range(len(data)):
-        data[i] = data[i].replace('\n','')
-    data[0]=convertPoint(data[0])   #Start point
-    data[1]=convertPoint(data[1])   #End point
-    data[2]=int(data[2])            #Value m
-    fin.close()
-    return (data[0],data[1],data[2])
-
+#=============================Heuristic function=============================
 def heuristic1(pos,goal):
     return pos.distanceTo(goal)
 
@@ -48,9 +30,42 @@ def heuristic4(pos,goal):
     (gx,gy)=goal.pos()
     return abs(px-gx)+abs(py-gy)
 
+#=============================Utils function=============================
+
+#Convert from format "(x;y)" to tuple(x,y)
+#Input: raw = String in format "(x;y)"
+#Output: Tuple(x,y)
+def convertPoint(raw):
+    raw = raw[1:len(raw)-1]
+    raw = raw.split(';')
+    for i in range(len(raw)):
+        raw[i] = int(raw[i])
+    return tuple(raw)
+
+
+#Read the input file to get data
+#Input: path = String of file path
+#Output: Tuple(start,end,m) with start=Tuple(x,y) and end=Tuple(x,y)
+def readInput(path):
+    fin = open(path)
+    data = fin.readlines()
+    for i in range(len(data)):
+        data[i] = data[i].replace('\n','')
+    data[0]=convertPoint(data[0])   #Start point
+    data[1]=convertPoint(data[1])   #End point
+    data[2]=int(data[2])            #Value m
+    fin.close()
+    return (data[0],data[1],data[2])
+
+#The priority function to create heap
+#Input: node = Node
+#Output: Value of priority
 def priority(node):
     return node.f
 
+#Get all the neighboor node (adjacent, |deltA|<=m)
+#Input: node = Node
+#Output: list of Node 
 def getNeighboor(node):
     global img, m, nodeMat
 
@@ -68,6 +83,9 @@ def getNeighboor(node):
                 result.append(neighboor)
     return result
 
+#Create nodes matrix from an image
+#Input: img = MyImg
+#Output: list of list Node (matrix Node)
 def createNode(img):
     nodeMat = []
     for y in range(img.height):
@@ -79,8 +97,10 @@ def createNode(img):
         nodeMat.append(nodeRow)
     return nodeMat
 
-def addQueue(parent,node,goal,hFunction):
-    global queue, explored
+#Add a node to the queue
+#Input: parent, node, goal, hFunction = Node, Node, Node, Pointer to a float-return function
+#Description: Add [node] to queue whose [parent] and [goal] with the heuristic function [hFunction]
+def addQueue(queue,explored,parent,node,goal,hFunction):
     if (node in queue):
         oldG = node.g
         newG = parent.g+parent.distanceTo(node)
@@ -91,11 +111,15 @@ def addQueue(parent,node,goal,hFunction):
         node.setH(hFunction(node,goal))
         queue.add(node)
 
+#Print the queue (For debug only)
 def queuePrint():
     global queue
     for node in queue:
         node.printInfo()
 
+#Function to find the min Node in the queue with the priority function
+#Input: queue, priority = Queue, Pointer to a float-return function
+#Output: minNode = Node
 def findMin(queue,priority):
     v = None
     result = None
@@ -110,14 +134,23 @@ def findMin(queue,priority):
                 result = node
     return result
         
-def run(hFunc,number):
-    global img, start, end, m, explored, queue, nodeMat
-    count = 0
+#Running function
+#Input: img, hFunc, number = MyImage, Pointer to float-return function, int
+#Output: img, path, cost, nTouchNode = MyImg, list of Node, float, int
+def run(img, hFunc,number):
+    global start, end, m, explored, queue, nodeMat
+    
+    #Copy into a new image
     imgOut = img.copy("output%d.bmp"%(number))
+    
+    count = 0
+    
     startNode = nodeMat[start[1]][start[0]]
     goalNode = nodeMat[end[1]][end[0]]
+    
     addQueue(startNode,startNode,goalNode,hFunc)
     result = []
+
     while (len(queue)>0):
         node = findMin(queue,priority)
         if (node==goalNode):
@@ -137,7 +170,7 @@ def run(hFunc,number):
         explored.add(node)
         neighboor = getNeighboor(node)
         for i in range(len(neighboor)):
-            addQueue(node,neighboor[i],goalNode,hFunc)
+            addQueue(queue,explored,node,neighboor[i],goalNode,hFunc)
             pos = neighboor[i].pos()
     imgOut.save()
     imgOut.show()
@@ -147,11 +180,13 @@ def run(hFunc,number):
 def main():
     img = MyImg(defaultPath)
     img.printInfo()
-    start,end,m = readInput("input.txt")
+    start,end,m = readInput(inputPath)
     nodeMat = createNode(img)
+
     explored = set()
     queue = set()
-    startNode, goalNode = run(heuristic2,1)
+    startNode, goalNode = run(img, heuristic2,1)
+
     startNode.printInfo()
     goalNode.printInfo()
 
