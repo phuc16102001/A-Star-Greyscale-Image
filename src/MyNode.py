@@ -37,7 +37,7 @@ class Node:
     #Cast the node to string
     #Output: string("x y a g h f")
     def toStr(self):
-        return ("%f %f %f %f %f %f\n"%(self.x,self.y,self.a,self.g,self.h,self.f))
+        return ("%f %f %f %f %f %f"%(self.x,self.y,self.a,self.g,self.h,self.f))
 
     #Get the euclid distance (diagonal distance) between the current to another node
     #Input: node = Node

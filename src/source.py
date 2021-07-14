@@ -66,18 +66,19 @@ def priority(node):
 #Get all the neighboor node (adjacent, |deltA|<=m)
 #Input: node = Node
 #Output: list of Node 
-def getNeighboor(img, node):
-    global m, nodeMat
-
+def getNeighboor(nodeMat, m, node):
     dx = [-1,-1,-1,0,0,1,1,1]
     dy = [-1,0,1,-1,1,-1,0,1]
     x = node.x
     y = node.y
+    width = len(nodeMat)
+    height = len(nodeMat[0])
+
     result = []
     for i in range(len(dx)):
         newX = x+dx[i]
         newY = y+dy[i]
-        if (not(newX<0 or newY<0 or newX>=img.width or newY>=img.height)):
+        if (not(newX<0 or newY<0 or newX>=width or newY>=height)):
             neighboor = nodeMat[newY][newX]
             if (abs(node.deltaA(neighboor))<=m):
                 result.append(neighboor)
@@ -97,11 +98,13 @@ def createNode(img):
         nodeMat.append(nodeRow)
     return nodeMat
 
+def addNodeToQueue(queue,node):
+    pass
+
 #Add a node to the queue
 #Input: parent, node, goal, hFunction = Node, Node, Node, Pointer to a float-return function
 #Description: Add [node] to queue whose [parent] and [goal] with the heuristic function [hFunction]
-def addQueue(parent,node,goal,hFunction):
-    global queue,explored
+def checkNode(queue,explored,parent,node,goal,hFunction):
 
     if (node in queue):
         oldG = node.g
@@ -139,63 +142,63 @@ def findMin(queue,priority):
 #Running function
 #Input: img, hFunc, number = MyImage, Pointer to float-return function, int
 #Output: img, path, cost, nTouchNode = MyImg, list of Node, float, int
-def run(img, hFunc,number):
-    global start, end, m, explored, queue, nodeMat
+def run(img, hFunc, startPos, endPos, m, number):
     
+    #Explored and queue set
+    explored = set()
+    queue = set()
+
     #Copy into a new image
     imgOut = img.copy("output%d.bmp"%(number))
+    nodeMat = createNode(img)
     
-    count = 0
+    #Get the start and goal node
+    startNode = nodeMat[startPos[1]][startPos[0]]
+    goalNode = nodeMat[endPos[1]][endPos[0]]
     
-    startNode = nodeMat[start[1]][start[0]]
-    goalNode = nodeMat[end[1]][end[0]]
-    
-    addQueue(startNode,startNode,goalNode,hFunc)
-    result = []
+    #Add the startNode to queue
+    checkNode(queue,explored,startNode,startNode,goalNode,hFunc)
 
+    #If the queue is not empty
     while (len(queue)>0):
+        #Pop the highest priority out (lowest Node.f)
         node = findMin(queue,priority)
+
+        #If we found the goal (end searching)
         if (node==goalNode):
             #Traceback
+            print("FOUND")
+            result = []
             while (node!=startNode):
                 result.append(node)
-                pos = node.pos()
-                node.printInfo()
-                imgOut.write(pos,colorRed)
+                imgOut.write(node.pos(),colorRed)
                 node=node.parent
             result.append(startNode)
             result = result[::-1]
-            break
+            imgOut.save()                                                       #Save the image
+            imgOut.show()                                                       #Open
+            return result
         
         #Not goal
-        queue.remove(node)
-        explored.add(node)
-        neighboor = getNeighboor(img,node)
-        for i in range(len(neighboor)):
-            addQueue(node,neighboor[i],goalNode,hFunc)
-            pos = neighboor[i].pos()
-    imgOut.save()
-    imgOut.show()
-    return (startNode,goalNode)
+        queue.remove(node)                                              #Remove the poped
+        explored.add(node)                                              #Add to explored set
+        neighboor = getNeighboor(nodeMat,m,node)                        #Get list of node that can move
+        for i in range(len(neighboor)):                                 #For each node
+            checkNode(queue,explored,node,neighboor[i],goalNode,hFunc)  #Add that neighboor to queue if it better
+    return None
     
 #=============================Main driven=============================
-nodeMat = None
-explored = set()
-queue = set()
-start = None
-end = None
-m = None
-
 def main():
-    global nodeMat, explored,queue,start,end,m
-
+    #Input
     img = MyImg(defaultPath)
     img.printInfo()
-    start,end,m = readInput(inputPath)
-    nodeMat = createNode(img)
-    startNode, goalNode = run(img, heuristic2,1)
-    startNode.printInfo()
-    goalNode.printInfo()
+    startPos, endPos, m = readInput(inputPath)
+
+    #Get result
+    result = run(img, heuristic2, startPos, endPos, m, 1)
+    if (result!=None):
+        result[0].printInfo()
+        result[-1].printInfo()
 
 if __name__=="__main__":
     main()
