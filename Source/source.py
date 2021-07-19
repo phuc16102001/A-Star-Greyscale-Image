@@ -9,28 +9,31 @@
 #                                    #
 ######################################
 
-#=============================Library=============================
+#=============================Library========================================
 from MyImg import *
 from constant import *
 from MyMath import *
 from MyNode import *
 
 #=============================Heuristic function=============================
+#UCS
 def heuristic1(pos,goal):
-    return pos.distanceTo(goal)
-
-def heuristic2(pos,goal):
     return 0
 
-def heuristic3(pos,goal):
+#Euclid
+def heuristic2(pos,goal):
     return pos.euclidDistance(goal)
 
-def heuristic4(pos,goal):
+#Manhattan
+def heuristic3(pos,goal):
     (px,py)=pos.pos()
     (gx,gy)=goal.pos()
     return abs(px-gx)+abs(py-gy)
 
-#=============================Utils function=============================
+#Euclid with alpha
+def heuristic4(pos,goal):
+    return pos.distanceTo(goal)
+#=============================File function==================================
 
 #Convert from format "(x;y)" to tuple(x,y)
 #Input: raw = String in format "(x;y)"
@@ -41,7 +44,6 @@ def convertPoint(raw):
     for i in range(len(raw)):
         raw[i] = int(raw[i])
     return tuple(raw)
-
 
 #Read the input file to get data
 #Input: path = String of file path
@@ -57,6 +59,15 @@ def readInput(path):
     fin.close()
     return (data[0],data[1],data[2])
 
+#Write the cost and number of node it touched to file
+#Input: path of file, cost, nTouch
+def writeOutput(path,cost,nTouch):
+    regex = "%.2f\n%d"
+    fout = open(path,'w')
+    fout.write(regex%(cost,nTouch))
+    fout.close()
+
+#=============================Utils function===================================
 #The priority function to create heap
 #Input: node = Node
 #Output: Value of priority
@@ -71,8 +82,8 @@ def getNeighboor(nodeMat, m, node):
     dy = [-1,0,1,-1,1,-1,0,1]
     x = node.x
     y = node.y
-    width = len(nodeMat)
-    height = len(nodeMat[0])
+    height = len(nodeMat)
+    width = len(nodeMat[0])
 
     result = []
     for i in range(len(dx)):
@@ -98,58 +109,41 @@ def createNode(img):
         nodeMat.append(nodeRow)
     return nodeMat
 
-def addNodeToQueue(queue,node):
-    pass
-
 #Add a node to the queue
-#Input: parent, node, goal, hFunction = Node, Node, Node, Pointer to a float-return function
-#Description: Add [node] to queue whose [parent] and [goal] with the heuristic function [hFunction]
-def checkNode(queue,explored,parent,node,goal,hFunction):
-
+#Input: queue, parent, node, goal, hFunction = set, Node, Node, Node, Pointer to a float-return function
+#Description: Add [node] to [queue] whose [parent] and [goal] with the heuristic function [hFunction]
+def addNode(queue,parent,node,goal,hFunction):
     if (node in queue):
         oldG = node.g
         newG = parent.g+parent.distanceTo(node)
         if (newG<oldG):
             node.setParent(parent)
-    elif (not(node in explored)):
+    else:
         node.setParent(parent)
         node.setH(hFunction(node,goal))
         queue.add(node)
-
-#Print the queue (For debug only)
-def queuePrint():
-    global queue
-    for node in queue:
-        node.printInfo()
-
-#Function to find the min Node in the queue with the priority function
-#Input: queue, priority = Queue, Pointer to a float-return function
-#Output: minNode = Node
-def findMin(queue,priority):
-    v = None
-    result = None
-    for node in queue:
-        if (v==None):
-            result = node
-            v = priority(result)
-        else:
-            newV = priority(node)
-            if (newV<v):
-                v = newV
-                result = node
-    return result
-        
-#Running function
-#Input: img, hFunc, number = MyImage, Pointer to float-return function, int
-#Output: img, path, cost, nTouchNode = MyImg, list of Node, float, int
-def run(img, hFunc, startPos, endPos, m, number):
     
+#Draw the image with the list nodes with a specified color
+#Input: nodes list, input image, path for new image, color
+#Output: the image after draw = MyImg
+def drawNode(nodes,img,path,color):
+    imgOut = img.copy(path)
+    for node in nodes:
+        imgOut.write(node.pos(),color)
+    imgOut.save()     
+    return imgOut           
+
+
+#Running function
+#Input: img, hFunc, startPos, endPos, m = MyImage, Pointer to float-return function, tuples, tuples. int
+#Output: path, cost, nTouchNode
+def run(img, hFunc, startPos, endPos, m):
     #Explored and queue set
     explored = set()
     queue = set()
+    touch = set()
 
     #Copy into a new image
-    imgOut = img.copy("output%d.bmp"%(number))
     nodeMat = createNode(img)
     
     #Get the start and goal node
@@ -157,48 +151,63 @@ def run(img, hFunc, startPos, endPos, m, number):
     goalNode = nodeMat[endPos[1]][endPos[0]]
     
     #Add the startNode to queue
-    checkNode(queue,explored,startNode,startNode,goalNode,hFunc)
+    addNode(queue,startNode,startNode,goalNode,hFunc)
+    touch.add(startNode)
 
     #If the queue is not empty
     while (len(queue)>0):
         #Pop the highest priority out (lowest Node.f)
-        node = findMin(queue,priority)
+        node = min(queue,key=priority)
 
         #If we found the goal (end searching)
         if (node==goalNode):
             #Traceback
-            print("FOUND")
             result = []
             while (node!=startNode):
                 result.append(node)
-                imgOut.write(node.pos(),colorRed)
                 node=node.parent
             result.append(startNode)
             result = result[::-1]
-            imgOut.save()                                                       #Save the image
-            imgOut.show()                                                       #Open
-            return result
+            return (result,result[-1].g,touch)
         
         #Not goal
         queue.remove(node)                                              #Remove the poped
         explored.add(node)                                              #Add to explored set
         neighboor = getNeighboor(nodeMat,m,node)                        #Get list of node that can move
         for i in range(len(neighboor)):                                 #For each node
-            checkNode(queue,explored,node,neighboor[i],goalNode,hFunc)  #Add that neighboor to queue if it better
-    return None
-    
+            if not(neighboor[i] in explored):                           #Not in explored      
+                addNode(queue,node,neighboor[i],goalNode,hFunc)         #Add that neighboor to queue if it better
+                touch.add(neighboor[i])
+    return None    
+
 #=============================Main driven=============================
 def main():
     #Input
-    img = MyImg(defaultPath)
-    img.printInfo()
+    print("Reading input...")
+    img = MyImg(bmpInPath)
     startPos, endPos, m = readInput(inputPath)
+    img.printInfo()
+    print("Start position:",startPos)
+    print("End position: ",endPos)
+    print("m:",m)
 
-    #Get result
-    result = run(img, heuristic2, startPos, endPos, m, 1)
-    if (result!=None):
-        result[0].printInfo()
-        result[-1].printInfo()
+    #Heuristic function list
+    hList = [heuristic1,heuristic2,heuristic3,heuristic4]
+
+    #Each function
+    for i in range(len(hList)):             
+        print("Running heuristic %d:"%(i+1),end=" ")
+        
+        #Get the result
+        path, cost, touch = run(img, hList[i], startPos, endPos, m)
+        nTouch = len(touch)
+
+        #If found path
+        if (path!=None):
+            print(cost,nTouch)
+            drawNode(path, img, bmpOutPath%(i+1), colorRed)         #Draw the output image
+            drawNode(touch, img, bmpTouchPath%(i+1), colorBlue)     #Draw the touched image
+            writeOutput(outputPath%(i+1), cost, nTouch)             #Write to file
 
 if __name__=="__main__":
     main()

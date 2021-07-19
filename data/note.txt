@@ -1,0 +1,4 @@
+h1: zero
+h2: euclid
+h3: manhatan
+h4: euclid with alpha
